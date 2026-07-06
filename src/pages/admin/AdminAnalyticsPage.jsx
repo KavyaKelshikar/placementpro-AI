@@ -116,7 +116,8 @@ function AdminAnalyticsPage() {
     async function fetchAnalytics() {
       try {
         setLoading(true);
-        const res = await fetch('/api/analytics/admin', {
+        const apiBase = import.meta.env.VITE_API_BASE_URL || '';
+        const res = await fetch(`${apiBase}/api/analytics/admin`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const json = await res.json();

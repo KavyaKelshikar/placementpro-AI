@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const seedDatabase = require('./seeder');
 
 const connectDB = async () => {
   try {
@@ -7,6 +8,9 @@ const connectDB = async () => {
       autoIndex: true, // Auto-build indexes (can be set to false in production for performance)
     });
     console.log(`MongoDB Connected: ${conn.connection.host}`);
+    
+    // Seed initial records if DB is empty
+    await seedDatabase();
   } catch (error) {
     console.error(`MongoDB Connection Error: ${error.message}. Proceeding with web server initialization (DB dependent routes will be inactive).`);
   }

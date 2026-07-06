@@ -136,7 +136,8 @@ function StudentResumePage() {
 
       setAnalysisStep(2);
 
-      const response = await fetch('/api/resumes', {
+      const apiBase = import.meta.env.VITE_API_BASE_URL || '';
+      const response = await fetch(`${apiBase}/api/resumes`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
