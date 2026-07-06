@@ -101,7 +101,7 @@ async function seedDatabase() {
           title: 'PlacementPro Portal',
           description: 'AI-enabled college recruitment and student matchmaking system.',
           technologies: ['React', 'Node.js', 'Express', 'MongoDB'],
-          link: 'https://placementpro-ai.vercel.app'
+          link: 'https://placementpro-ai-eta.vercel.app'
         }
       ]
     });
