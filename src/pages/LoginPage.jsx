@@ -123,11 +123,13 @@ function LoginPage() {
       navigate(`/${role}/dashboard`);
     } catch (err) {
       clearTimeout(timeoutId);
-      if (err.name === 'AbortError' || err.message.includes('Failed to fetch') || err.message.includes('fetch')) {
-        console.warn('Backend Auth offline. Falling back to local demo mode:', err.message);
-        // Fallback local session
-        login({ id: `${role}-demo`, role, email }, 'demo-token');
-        navigate(`/${role}/dashboard`);
+      if (err.name === 'AbortError' || err.message.includes('Failed to fetch') || err.message.includes('NetworkError') || err.message.includes('network')) {
+        // Server is offline or unreachable — do NOT auto-login any user.
+        if (isRegister) {
+          setErrorMsg('Unable to connect to the server. Please try again later.');
+        } else {
+          setErrorMsg('Unable to connect to the server. If you don\'t have an account yet, click "Create Account" below.');
+        }
       } else {
         setErrorMsg(err.message || 'An error occurred during authentication.');
       }

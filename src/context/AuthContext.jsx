@@ -12,21 +12,29 @@ export function getNameFromEmail(email) {
     .join(' ');
 }
 
-const defaultUser = {
-  id: 'demo-user',
-  name: 'Aarav Sharma',
-  role: 'student',
-  email: 'aarav@placementpro.ai',
-};
-
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => {
-    const stored = localStorage.getItem('pp_auth_user');
-    return stored ? JSON.parse(stored) : null;
+    try {
+      const storedToken = localStorage.getItem('pp_auth_token');
+      // Reject demo-token sessions — they bypass real authentication
+      if (!storedToken || storedToken === 'demo-token') {
+        localStorage.removeItem('pp_auth_user');
+        localStorage.removeItem('pp_auth_token');
+        return null;
+      }
+      const stored = localStorage.getItem('pp_auth_user');
+      return stored ? JSON.parse(stored) : null;
+    } catch {
+      return null;
+    }
   });
-  const [token, setToken] = useState(() => localStorage.getItem('pp_auth_token') || null);
+  const [token, setToken] = useState(() => {
+    const t = localStorage.getItem('pp_auth_token');
+    return t && t !== 'demo-token' ? t : null;
+  });
 
-  const login = (nextUser, nextToken = 'demo-token') => {
+  const login = (nextUser, nextToken) => {
+    if (!nextToken || nextToken === 'demo-token') return; // Reject any demo session
     const email = nextUser.email || `${nextUser.role}@placementpro.ai`;
     const name = nextUser.name || getNameFromEmail(email);
     const resolvedUser = {
