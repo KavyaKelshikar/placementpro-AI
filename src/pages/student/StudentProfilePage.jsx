@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { User, School, GraduationCap, Calendar, BarChart, Sparkles, X, PlusCircle } from 'lucide-react';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
+import GitHubIntegration from '../../components/github/GitHubIntegration';
 import { useAuth } from '../../context/AuthContext';
 import { useData } from '../../context/DataContext';
 import toast from 'react-hot-toast';
@@ -50,6 +51,13 @@ function StudentProfilePage() {
       skills,
     });
     toast.success('Profile updated successfully!');
+  };
+
+  const handleGitHubSkillSync = (newSkills) => {
+    const merged = [...new Set([...skills, ...newSkills])];
+    setSkills(merged);
+    updateStudentProfile({ college, degree, gradYear, cgpa, skills: merged });
+    toast.success(`✅ ${newSkills.length} GitHub skills synced to your profile!`);
   };
 
   return (
@@ -191,6 +199,18 @@ function StudentProfilePage() {
             </Button>
           </form>
         </Card>
+      </div>
+
+      {/* GitHub Integration Section */}
+      <div>
+        <div className="mb-3">
+          <h2 className="text-base font-semibold text-slate-900">Developer Identity</h2>
+          <p className="text-xs text-slate-500 mt-0.5">Connect your GitHub to auto-detect tech stack and boost your match score.</p>
+        </div>
+        <GitHubIntegration
+          existingSkills={skills}
+          onSyncSkills={handleGitHubSkillSync}
+        />
       </div>
     </div>
   );
