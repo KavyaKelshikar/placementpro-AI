@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { 
   BriefcaseBusiness, 
   MapPin, 
@@ -20,6 +21,7 @@ function StudentRecommendedJobsPage() {
   const { jobs, applications, savedJobs, applyToJob, saveJob, getStudentProfile } = useData();
   const studentProfile = getStudentProfile();
   const studentSkills = studentProfile?.skills || [];
+  const navigate = useNavigate();
 
   const [filterMatched, setFilterMatched] = useState(false);
 
@@ -78,6 +80,34 @@ function StudentRecommendedJobsPage() {
       toast.success('Job bookmarked successfully!');
     }
   };
+
+  const isResumeUploaded = studentProfile?.resume?.uploaded === true;
+
+  if (!isResumeUploaded) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-semibold tracking-tight text-slate-900 font-sans">AI job recommendations</h1>
+          <p className="text-slate-500 mt-1">Explore job boards matching your scanned resume nodes and profile certifications.</p>
+        </div>
+
+        <Card className="text-center py-16 px-6 max-w-2xl mx-auto border border-brand-100 bg-gradient-to-b from-white to-brand-50/20">
+          <div className="rounded-2xl bg-brand-50 p-4 text-brand-600 border border-brand-100/50 w-fit mx-auto mb-6">
+            <Sparkles className="h-8 w-8 animate-pulse" />
+          </div>
+          <h3 className="text-xl font-bold text-slate-900">Unlock AI job recommendations</h3>
+          <p className="text-slate-600 mt-3 max-w-md mx-auto leading-relaxed font-sans">
+            Upload your resume now to instantly activate AI match scoring, scan key talent nodes, and unlock personalized job recommendations tailored for your career path.
+          </p>
+          <div className="mt-8 flex justify-center gap-4">
+            <Button onClick={() => navigate('/student/resume')} className="rounded-full px-6 py-3 font-semibold">
+              Upload Resume
+            </Button>
+          </div>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

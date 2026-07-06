@@ -19,19 +19,20 @@ function StudentDashboardPage() {
   const myApplications = applications.filter((app) => app.studentEmail === user?.email);
   const myInterviews = interviews.filter((i) => i.studentEmail === user?.email);
   
-  const recommendedCount = jobs.filter((job) => {
-    // If student has uploaded resume skills, recommend based on overlaps, otherwise recommend all active jobs
-    const studentSkills = studentProfile?.skills || [];
-    if (studentSkills.length === 0) return true;
-    return (job.skills || []).some((skill) => studentSkills.includes(skill));
-  }).length;
+  const recommendedCount = resumeInfo.uploaded
+    ? jobs.filter((job) => {
+        const studentSkills = studentProfile?.skills || [];
+        if (studentSkills.length === 0) return false;
+        return (job.skills || []).some((skill) => studentSkills.includes(skill));
+      }).length
+    : 0;
 
   const applicationsSent = myApplications.length;
   const interviewInvites = myInterviews.filter((i) => i.status === 'Scheduled').length;
 
   const shortlistedCount = myApplications.filter((app) => app.status === 'Shortlisted').length;
   const totalInterviewRounds = myInterviews.length;
-  const offerReadiness = resumeInfo.score ? `${resumeInfo.score}%` : '45%';
+  const offerReadiness = resumeInfo.uploaded ? `${resumeInfo.score}%` : '0%';
 
   const items = [
     { label: 'Recommended roles', value: recommendedCount.toString(), detail: 'High-fit roles for your profile', icon: Sparkles, accent: 'brand', path: '/student/recommended' },

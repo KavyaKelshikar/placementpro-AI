@@ -48,6 +48,30 @@ exports.register = async (req, res, next) => {
       return next(new ErrorResponse('College Administrator registration is restricted to authorized accounts only.', 403));
     }
 
+    // Enforce Gmail validation for students and recruiters
+    if (role !== 'admin') {
+      const gmailRegex = /^[a-zA-Z0-9.]+@gmail\.com$/;
+      if (!gmailRegex.test(email)) {
+        return next(
+          new ErrorResponse(
+            'Only Gmail accounts are accepted for registration. Gmail address must contain only letters, numbers, and periods (e.g. user.name@gmail.com).',
+            400
+          )
+        );
+      }
+    }
+
+    // Enforce password complexity (min 8 chars, 1 uppercase, 1 lowercase, 1 number, 1 special char)
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{}|;':",./<>?])[A-Za-z\d!@#$%^&*()_+\-=\[\]{}|;':",./<>?]{8,}$/;
+    if (!passwordRegex.test(password)) {
+      return next(
+        new ErrorResponse(
+          'Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one number, and one special character.',
+          400
+        )
+      );
+    }
+
     // Check if user already exists
     const userExists = await User.findOne({ email });
     if (userExists) {
