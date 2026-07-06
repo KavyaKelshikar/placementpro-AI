@@ -21,23 +21,35 @@ function LoginPage() {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+    const apiBase = import.meta.env.VITE_API_BASE_URL || '';
+    
+    // Create AbortController for a 1.5s fast timeout to prevent freezing
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 1500);
+
     try {
-      const apiBase = import.meta.env.VITE_API_BASE_URL || '';
       // 1. Try to authenticate credentials on backend
       const res = await fetch(`${apiBase}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
         body: JSON.stringify({ email, password }),
       });
+      clearTimeout(timeoutId);
       let data = await res.json();
 
       if (!res.ok) {
-        // 2. If user doesn't exist, try auto-registering
+        // If login failed (e.g. user not found), try registering
+        const registerController = new AbortController();
+        const registerTimeoutId = setTimeout(() => registerController.abort(), 1500);
+
         const regRes = await fetch(`${apiBase}/api/auth/register`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          signal: registerController.signal,
           body: JSON.stringify({ email, password, role }),
         });
+        clearTimeout(registerTimeoutId);
         data = await regRes.json();
         if (!regRes.ok) {
           throw new Error(data.error || 'Authentication mismatch');
@@ -48,6 +60,7 @@ function LoginPage() {
       login(data.user, data.token);
       navigate(`/${role}/dashboard`);
     } catch (err) {
+      clearTimeout(timeoutId);
       console.warn('Backend Auth offline/failed. Falling back to local demo mode:', err.message);
       // Fallback local session
       login({ id: `${role}-demo`, role, email }, 'demo-token');
