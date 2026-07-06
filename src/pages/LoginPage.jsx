@@ -19,10 +19,40 @@ function LoginPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
-    login({ id: `${role}-demo`, role, email }, 'demo-token');
-    navigate(`/${role}/dashboard`);
+    try {
+      const apiBase = import.meta.env.VITE_API_BASE_URL || '';
+      // 1. Try to authenticate credentials on backend
+      const res = await fetch(`${apiBase}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      let data = await res.json();
+
+      if (!res.ok) {
+        // 2. If user doesn't exist, try auto-registering
+        const regRes = await fetch(`${apiBase}/api/auth/register`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password, role }),
+        });
+        data = await regRes.json();
+        if (!regRes.ok) {
+          throw new Error(data.error || 'Authentication mismatch');
+        }
+      }
+
+      // Successful DB authentication
+      login(data.user, data.token);
+      navigate(`/${role}/dashboard`);
+    } catch (err) {
+      console.warn('Backend Auth offline/failed. Falling back to local demo mode:', err.message);
+      // Fallback local session
+      login({ id: `${role}-demo`, role, email }, 'demo-token');
+      navigate(`/${role}/dashboard`);
+    }
   };
 
   return (
@@ -44,9 +74,16 @@ function LoginPage() {
               type="button"
               onClick={() => {
                 setRole(item.key);
-                if (item.key === 'student') setEmail('aarav.sharma@placementpro.ai');
-                else if (item.key === 'recruiter') setEmail('recruiter@google.com');
-                else setEmail('admin@placementpro.ai');
+                if (item.key === 'student') {
+                  setEmail('aarav.sharma@placementpro.ai');
+                  setPassword('student123');
+                } else if (item.key === 'recruiter') {
+                  setEmail('recruiter@google.com');
+                  setPassword('recruiter123');
+                } else {
+                  setEmail('admin@placementpro.ai');
+                  setPassword('admin123');
+                }
               }}
               className={`rounded-[16px] border px-4 py-3 text-sm font-semibold transition ${role === item.key ? 'border-brand-600 bg-brand-50 text-brand-700' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}
             >

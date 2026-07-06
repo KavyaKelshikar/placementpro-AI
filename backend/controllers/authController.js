@@ -38,9 +38,14 @@ exports.register = async (req, res, next) => {
   const { email, password, role } = req.body;
 
   try {
-    // Validate inputs (role check)
+    // Validate inputs
     if (!email || !password || !role) {
       return next(new ErrorResponse('Please provide email, password and role', 400));
+    }
+
+    // Restrict Administrator registration to the main credentials
+    if (role === 'admin' && email.toLowerCase() !== 'admin@placementpro.ai') {
+      return next(new ErrorResponse('College Administrator registration is restricted to authorized accounts only.', 403));
     }
 
     // Check if user already exists
@@ -55,6 +60,37 @@ exports.register = async (req, res, next) => {
       password,
       role,
     });
+
+    // Automatically create corresponding empty profile documents for seamless onboarding
+    if (role === 'student') {
+      const localPart = email.split('@')[0];
+      const nameParts = localPart.split(/[\._\-]/);
+      const firstName = nameParts[0].charAt(0).toUpperCase() + nameParts[0].slice(1);
+      const lastName = nameParts[1] ? (nameParts[1].charAt(0).toUpperCase() + nameParts[1].slice(1)) : 'User';
+
+      await Student.create({
+        user: user._id,
+        firstName,
+        lastName,
+        rollNumber: `CS${Date.now().toString().slice(-6)}`,
+        department: 'CSE',
+        batch: '2022-2026',
+        cgpa: 8.0,
+        skills: [],
+      });
+    } else if (role === 'recruiter') {
+      const localPart = email.split('@')[0];
+      const nameParts = localPart.split(/[\._\-]/);
+      const firstName = nameParts[0].charAt(0).toUpperCase() + nameParts[0].slice(1);
+      const lastName = nameParts[1] ? (nameParts[1].charAt(0).toUpperCase() + nameParts[1].slice(1)) : 'HR';
+
+      await Recruiter.create({
+        user: user._id,
+        firstName,
+        lastName,
+        jobTitle: 'Hiring Specialist',
+      });
+    }
 
     sendTokenResponse(user, 201, res);
   } catch (error) {
