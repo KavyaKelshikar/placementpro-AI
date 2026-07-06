@@ -27,7 +27,31 @@ connectDB();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-app.use(cors());
+// Allowed origins: Vercel frontend + local dev
+const ALLOWED_ORIGINS = [
+  'https://placementpro-ai-eta.vercel.app',
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'http://localhost:5000',
+  // Allow any Vercel preview deployments for this project
+  /https:\/\/placementpro-ai.*\.vercel\.app$/,
+];
+
+app.use(cors({
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, curl, Postman)
+    if (!origin) return callback(null, true);
+    const isAllowed = ALLOWED_ORIGINS.some((o) =>
+      typeof o === 'string' ? o === origin : o.test(origin)
+    );
+    if (isAllowed) {
+      callback(null, true);
+    } else {
+      callback(new Error(`CORS policy: origin ${origin} is not allowed`));
+    }
+  },
+  credentials: true,
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan('dev'));
