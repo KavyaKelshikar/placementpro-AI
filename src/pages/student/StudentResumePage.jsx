@@ -8,11 +8,14 @@ import {
   RefreshCw,
   AlertCircle,
   X,
-  Plus
+  Plus,
+  Wifi,
+  WifiOff
 } from 'lucide-react';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import { useData } from '../../context/DataContext';
+import { useAuth } from '../../context/AuthContext';
 
 const KNOWN_SKILLS = [
   'Python', 'C++', 'Java', 'Data Structures', 'Algorithms', 'OOPS', 'DBMS', 'OS Basics',
@@ -82,6 +85,7 @@ function scanTextForSkills(text) {
 
 function StudentResumePage() {
   const { uploadResumeInfo, getStudentProfile } = useData();
+  const { token } = useAuth();
   const [activeTab, setActiveTab] = useState('upload'); // 'upload' or 'paste'
   const [file, setFile] = useState(null);
   const [pastedText, setPastedText] = useState('');
@@ -89,6 +93,8 @@ function StudentResumePage() {
   const [analyzing, setAnalyzing] = useState(false);
   const [analysisStep, setAnalysisStep] = useState(0);
   const [newSkillInput, setNewSkillInput] = useState('');
+  const [apiError, setApiError] = useState(null);
+  const [usedRealAI, setUsedRealAI] = useState(false);
   
   const studentProfile = getStudentProfile();
   const resumeInfo = studentProfile?.resume || {};
@@ -113,94 +119,102 @@ function StudentResumePage() {
   const handleFileChange = (e) => {
     if (e.target.files && e.target.files.length > 0) {
       setFile(e.target.files[0]);
+      setApiError(null);
     }
   };
 
-  const triggerAnalysis = () => {
-    if (activeTab === 'upload' && !file) return;
-    if (activeTab === 'paste' && !pastedText.trim()) return;
+  // ─── Upload Tab: real API call to backend → Python AI service ───────────────
+  const triggerUploadAnalysis = async () => {
+    if (!file) return;
+    setAnalyzing(true);
+    setApiError(null);
+    setAnalysisStep(1);
 
+    try {
+      const formData = new FormData();
+      formData.append('resume', file);
+
+      setAnalysisStep(2);
+
+      const response = await fetch('/api/resumes', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      setAnalysisStep(3);
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || data.message || `Server error ${response.status}`);
+      }
+
+      // Build insights from API suggestions
+      const suggestions = data.analysis?.suggestions || [
+        'Upload processed successfully.',
+        'Skills have been synced to your student profile.',
+        'Apply to jobs to see your match scores.',
+      ];
+
+      uploadResumeInfo({
+        fileName: file.name,
+        score: data.analysis?.score ?? 80,
+        skills: data.analysis?.skillsMatched || [],
+        insights: suggestions,
+      });
+
+      setUsedRealAI(true);
+      setFile(null);
+    } catch (err) {
+      console.error('Resume upload error:', err);
+      setApiError(err.message);
+    } finally {
+      setAnalyzing(false);
+      setAnalysisStep(0);
+    }
+  };
+
+  // ─── Paste Tab: client-side text scanner (no backend needed) ────────────────
+  const triggerPasteAnalysis = () => {
+    if (!pastedText.trim()) return;
     setAnalyzing(true);
     setAnalysisStep(1);
 
-    // Step-by-step progress simulation
-    setTimeout(() => {
-      setAnalysisStep(2);
-    }, 1000);
+    setTimeout(() => setAnalysisStep(2), 800);
+    setTimeout(() => setAnalysisStep(3), 1600);
 
     setTimeout(() => {
-      setAnalysisStep(3);
-    }, 2000);
+      const skills = scanTextForSkills(pastedText);
+      const score = Math.min(95, 65 + skills.length * 2.5);
 
-    setTimeout(() => {
-      let skills = [];
-      let insights = [];
-      let score = 85;
-      let name = 'Uploaded Resume';
-
-      if (activeTab === 'upload' && file) {
-        name = file.name;
-        const fileNameLower = file.name.toLowerCase();
-        
-        // Exact matching for Kavya's resume to make output 100% correct
-        if (fileNameLower.includes('kavya') || fileNameLower.includes('placement')) {
-          skills = [
-            'Python', 'C++', 'Java', 'Data Structures', 'Algorithms', 'OOPS', 'DBMS', 'OS Basics',
-            'HTML', 'CSS', 'JavaScript', 'React', 'Node.js', 'Next.js', 'Flask', 'Express.js',
-            'MongoDB', 'MySQL', 'Git', 'Docker', 'Jira', 'Linux', 'AWS', 'VS Code'
-          ];
-          insights = [
-            'Excellent technical match for Fullstack, Backend & Web engineering roles.',
-            'Solid CS fundamentals indicated by DBMS, OOPS, Data Structures, and Algorithms.',
-            'Experienced with modern deployment and developer tools like AWS, Docker, Git, and Linux.'
-          ];
-          score = 91;
-        } else if (fileNameLower.includes('python') || fileNameLower.includes('ml') || fileNameLower.includes('data')) {
-          skills = ['Python', 'PyTorch', 'Machine Learning', 'SQL', 'Data Science', 'Pandas', 'Jupyter'];
-          insights = mockInsightsSets[1];
-          score = 88;
-        } else if (fileNameLower.includes('design') || fileNameLower.includes('ui') || fileNameLower.includes('ux')) {
-          skills = ['Figma', 'UI/UX Design', 'User Research', 'Wireframing', 'Prototyping', 'Interaction Design'];
-          insights = mockInsightsSets[2];
-          score = 91;
-        } else {
-          skills = ['React', 'JavaScript', 'TypeScript', 'Tailwind CSS', 'Node.js', 'Express', 'MongoDB'];
-          insights = mockInsightsSets[0];
-          score = 87;
-        }
-      } else {
-        // Paste tab: real client-side analysis
-        name = 'Pasted Resume Text';
-        skills = scanTextForSkills(pastedText);
-        
-        // Calculate dynamic score
-        score = Math.min(95, 65 + skills.length * 2.5);
-        if (skills.length === 0) {
-          skills = ['Communication', 'Problem Solving'];
-          score = 50;
-        }
-
-        insights = [
-          `Identified ${skills.length} core technical capabilities from pasted profile.`,
-          skills.includes('React') || skills.includes('Node.js') 
-            ? 'Strong match for modern web development pipelines.' 
-            : 'Consider adding more web technologies to boost matching score.',
-          'Make sure to detail key project impacts and achievements.'
-        ];
-      }
+      const finalSkills = skills.length > 0 ? skills : ['Communication', 'Problem Solving'];
+      const finalScore = skills.length > 0 ? score : 50;
 
       uploadResumeInfo({
-        fileName: name,
-        score: Math.round(score),
-        skills,
-        insights,
+        fileName: 'Pasted Resume Text',
+        score: Math.round(finalScore),
+        skills: finalSkills,
+        insights: [
+          `Identified ${finalSkills.length} core technical capabilities from pasted profile.`,
+          finalSkills.includes('React') || finalSkills.includes('Node.js')
+            ? 'Strong match for modern web development pipelines.'
+            : 'Consider adding more web technologies to boost matching score.',
+          'Make sure to detail key project impacts and achievements.',
+        ],
       });
 
+      setUsedRealAI(false);
       setAnalyzing(false);
       setAnalysisStep(0);
-      setFile(null);
       setPastedText('');
-    }, 3000);
+    }, 2400);
+  };
+
+  const triggerAnalysis = () => {
+    if (activeTab === 'upload') triggerUploadAnalysis();
+    else triggerPasteAnalysis();
   };
 
   const handleRemoveSkill = (skillToRemove) => {
@@ -341,6 +355,18 @@ function StudentResumePage() {
             )}
           </div>
 
+          {/* API Error Banner */}
+          {apiError && (
+            <div className="mt-4 flex items-start gap-2.5 rounded-xl bg-red-50 border border-red-100 px-4 py-3 text-xs text-red-700">
+              <WifiOff className="h-4 w-4 shrink-0 mt-0.5 text-red-500" />
+              <div>
+                <p className="font-semibold">Upload failed</p>
+                <p className="mt-0.5 text-red-600 leading-relaxed">{apiError}</p>
+                <p className="mt-1 text-red-500">Make sure you are logged in and the server is running on port 5000.</p>
+              </div>
+            </div>
+          )}
+
           <Button
             disabled={analyzing || (activeTab === 'upload' ? !file : !pastedText.trim())}
             onClick={triggerAnalysis}
@@ -361,6 +387,11 @@ function StudentResumePage() {
                 <div>
                   <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-brand-200">
                     <Sparkles className="h-4 w-4" /> AI Resume Audit
+                    {usedRealAI && (
+                      <span className="ml-2 flex items-center gap-1 rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-bold text-emerald-300 border border-emerald-500/30">
+                        <Wifi className="h-2.5 w-2.5" /> Python AI
+                      </span>
+                    )}
                   </div>
                   <p className="mt-4 text-sm text-brand-200">Processed Document</p>
                   <h3 className="text-xl font-bold truncate max-w-[260px]">{resumeInfo.fileName}</h3>
