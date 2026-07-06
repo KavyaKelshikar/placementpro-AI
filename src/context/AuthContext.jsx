@@ -22,9 +22,9 @@ const defaultUser = {
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => {
     const stored = localStorage.getItem('pp_auth_user');
-    return stored ? JSON.parse(stored) : defaultUser;
+    return stored ? JSON.parse(stored) : null;
   });
-  const [token, setToken] = useState(() => localStorage.getItem('pp_auth_token') || 'demo-token');
+  const [token, setToken] = useState(() => localStorage.getItem('pp_auth_token') || null);
 
   const login = (nextUser, nextToken = 'demo-token') => {
     const email = nextUser.email || `${nextUser.role}@placementpro.ai`;
